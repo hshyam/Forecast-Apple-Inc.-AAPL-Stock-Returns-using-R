@@ -1,0 +1,93 @@
+# Installing required packages for time series forecasting #
+install.packages("tseries")
+install.packages("timeDate")
+install.packages("Rcmdr")
+install.packages("RcmdrPlugin.epack")
+install.packages("tseries")
+install.packages("zoo")
+install.packages("quantmod")
+install.packages("forecast")
+library(FitARMA)
+library(forecast)
+library(tseries, quietly = T)
+library(forecast, quietly = T)
+
+
+# Downloads the AAPL historical price dataset from Yahoo Finance #
+applec <- get.hist.quote(instrument = "aapl", start = "2004-01-01", end = "2014-01-01", quote = "Close")
+
+
+# Summary of the AAPL data #
+summary(applec)
+
+
+# Length of the AAPL data #
+length(applec)
+
+
+# Plot original stock price #
+plot(applec,type='l',main='Daily Close Price of APPL')
+
+
+# Augmented Dickey-Fuller Test test to determine if the data is stationary or non-stationary #
+adf.test(applec)
+
+
+# Differencing and plotting the original series #
+applec_diff=diff(applec)
+plot(applec_diff,type='l',main='Difference AAPL')
+
+
+# Take log of original series and plot the log price #applec_log=log(applec) 
+plot(applec_log,type='l',main='Log AAPL')
+
+# Differencing log price and plotting it #applec_diff_log=diff(applec_log) 
+plot(applec_diff_log,type='l',main='Difference Log AAPL (Returns)')
+
+
+# Autocorrelation and Partial autocorrelation - ACF and PACF of log AAPL #
+acf(applec_log,main='ACF Log APPL',lag.max=13, na.action = na.pass, ylim=c(- 0.5,1))
+pacf(applec_log,main='PACF Log AAPL',lag.max=13, na.action = na.pass, ylim=c(- 0.5,1))
+
+
+# Autocorrelation and Partial autocorrelation - ACF and PACF of differenced logged AAPL #
+acf(applec_diff_log,main='ACF Differenced Log AAPL ',lag.max=13, na.action = na.pass, ylim=c(- 0.5,1))
+pacf(applec_diff_log,main='PACF Differenced Log AAPL',lag.max=13, na.action = na.pass, ylim=c(- 0.5,1))
+
+
+# Build train and test dataset for ARMA model #
+applec_diff_train <- applec_diff[1:(0.9 * length(applec_diff))]  # Train dataset
+applec_diff_test <- applec_diff[(0.9 * length(applec_diff) + 1):length(applec_diff)]  # Test dataset
+
+
+# Fit the model with ARIMA function #
+fit <- arima(applec_diff_train, order = c(2, 1, 2))
+arma.preds <- predict(fit, n.ahead = (length(applec_diff) - (0.9 * length(applec_diff))))$pred
+arma.forecast <- forecast(fit, h = 10)
+summary(arma.forecast)
+ 
+# Plot ARMA forecasts for APPL returns #
+plot(arma.forecast, main = "ARMA forecasts for APPL returns")
+
+
+
+# Build ARIMA model #
+arima(applec_log)  #ignores mean#
+ArimaModel <- arima(applec_log, order = c(2,1,2), include.mean=TRUE)
+ArimaModel
+
+
+# Summary of ARIMA model #
+summary(ArimaModel)
+
+
+# Display all elements of the output, in case we want to extract specific parts of it for further computation and then index each element with the $ and name #
+names(ArimaModel)
+ArimaModel$coef
+
+
+# Forecasting future time points #
+forecast(ArimaModel, h = 10)
+plot(forecast(ArimaModel))
+
+
